@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { PDFUploader } from '@/components/PDFUploader';
-import { saveNote, checkNotaDuplicada } from '@/lib/storage';
+import { createNote, findDuplicateNote } from '@/lib/notes-api';
 import { ExtractedNote } from '@/types/notes';
 import { useAuth } from '@/app/providers';
 
@@ -11,12 +11,11 @@ export default function LancarPage() {
   const { usuario, isLoading } = useAuth();
   const [notaSalva, setNotaSalva] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
-  const [shouldResetUploader, setShouldResetUploader] = useState(false);
+  const [uploaderKey, setUploaderKey] = useState(0);
 
-  const handleNoteExtracted = (note: Omit<ExtractedNote, 'id' | 'numeroOrdem' | 'criadoEm'>) => {
+  const handleNoteExtracted = async (note: Omit<ExtractedNote, 'id' | 'numeroOrdem' | 'criadoEm'>) => {
     try {
-      // Verificar se a nota já existe
-      const notaDuplicada = checkNotaDuplicada(note.numeroNota, usuario);
+      const notaDuplicada = await findDuplicateNote(note.numeroNota, usuario);
       
       if (notaDuplicada) {
         setErro(`⚠️ DUPLICIDADE DETECTADA: Nota fiscal #${note.numeroNota} já foi lançada em ${new Date(notaDuplicada.criadoEm).toLocaleDateString('pt-BR')} às ${new Date(notaDuplicada.criadoEm).toLocaleTimeString('pt-BR')}. Lançamento bloqueado.`);
@@ -29,19 +28,18 @@ export default function LancarPage() {
         return; // Impedir salvamento
       }
 
-      saveNote(note);
+      await createNote(note as Omit<ExtractedNote, 'id'>);
       setNotaSalva(true);
       setErro(null);
 
       // Mostrar mensagem de sucesso por 2 segundos
       setTimeout(() => {
         setNotaSalva(false);
-        // Resetar uploader para volta à tela de escolher arquivo
-        setShouldResetUploader((prev) => !prev);
+        setUploaderKey((prev) => prev + 1);
       }, 2000);
     } catch (error) {
       console.error('Erro ao salvar nota:', error);
-      setErro('Erro ao salvar a nota. Tente novamente.');
+      setErro(error instanceof Error ? error.message : 'Erro ao salvar a nota. Tente novamente.');
     }
   };
 
@@ -96,7 +94,7 @@ export default function LancarPage() {
         )}
 
         {/* Uploader */}
-        <PDFUploader usuario={usuario} onNoteExtracted={handleNoteExtracted} shouldReset={shouldResetUploader} />
+        <PDFUploader key={uploaderKey} usuario={usuario} onNoteExtracted={handleNoteExtracted} />
 
         {/* Instruções */}
         <div className="mt-8 p-6 bg-white rounded-lg shadow">
@@ -107,7 +105,7 @@ export default function LancarPage() {
               O sistema extrairá automaticamente: número da NF, CNPJ do fornecedor, placa do veículo, valor e data
             </li>
             <li>Revise os dados extraídos e edite se necessário</li>
-            <li>Clique em "Salvar Nota" para registrar a operação</li>
+            <li>Clique em &quot;Salvar Nota&quot; para registrar a operação</li>
             <li>A ordem será incrementada automaticamente a cada nota lançada</li>
           </ol>
         </div>

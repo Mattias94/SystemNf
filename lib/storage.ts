@@ -1,5 +1,10 @@
 import { ExtractedNote } from '@/types/notes';
 
+interface OficinaBase {
+  codigo: string;
+  cnpj: string;
+}
+
 const NOTES_STORAGE_KEY = 'nf_notes';
 const NEXT_ORDER_KEY = 'nf_next_order';
 
@@ -97,7 +102,7 @@ export function getOficinaByCodigo(codigo: string) {
   if (typeof window === 'undefined') return null;
 
   const oficinas = getOficias();
-  const oficina = oficinas.find((o: any) => o.codigo === codigo);
+  const oficina = oficinas.find((o: OficinaBase) => o.codigo === codigo);
   return oficina || null;
 }
 
@@ -105,6 +110,6 @@ export function getOficinaByCnpj(cnpj: string) {
   if (typeof window === 'undefined') return null;
 
   const oficinas = getOficias();
-  const oficina = oficinas.find((o: any) => o.cnpj === cnpj);
+  const oficina = oficinas.find((o: OficinaBase) => o.cnpj === cnpj);
   return oficina || null;
 }

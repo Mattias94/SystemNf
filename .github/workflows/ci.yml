@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - name: Install
+        run: npm ci
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Lint
+        run: npx eslint "app" "lib" "components" "types" --max-warnings=0
+      - name: Build
+        run: npm run build
+      - name: Run E2E
+        env:
+          BASE_URL: http://localhost:3000
+        run: |
+          npm run start -- --hostname 127.0.0.1 --port 3000 > /tmp/nf-system-start.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID' EXIT
+          until curl -fsS http://127.0.0.1:3000/; do
+            sleep 1
+          done
+          npm run e2e

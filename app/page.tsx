@@ -1,15 +1,16 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from './providers';
 
 export default function Home() {
-  const { usuario: usuarioAutenticado, setUsuario, logout } = useAuth();
-  const [usuarioInput, setUsuarioInput] = useState('');
+  const { usuario: usuarioAutenticado, setUsuario, logout, isLoading } = useAuth();
+  const [usuarioInput, setUsuarioInput] = useState(usuarioAutenticado || '');
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (usuarioAutenticado) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setUsuarioInput(usuarioAutenticado);
     }
   }, [usuarioAutenticado]);
@@ -20,6 +21,20 @@ export default function Home() {
       setUsuario(usuarioInput);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center p-4">
+        <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full text-center">
+          <h1 className="text-3xl font-bold text-gray-800 mb-4">NF System</h1>
+          <div className="flex justify-center items-center">
+            <div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full"></div>
+          </div>
+          <p className="text-gray-600 mt-4">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (usuarioAutenticado) {
     return (

@@ -21,19 +21,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Efeito para carregar usuário na montagem
   useEffect(() => {
     const usuarioStored = localStorage.getItem('nf_current_user');
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setUsuarioState(usuarioStored);
     setIsLoading(false);
   }, []);
 
   // Efeito para proteger rotas privadas
   useEffect(() => {
-    const rotasPrivadas = ['/lancar', '/relatorio', '/oficinas'];
-    const usuarioStored = localStorage.getItem('nf_current_user');
+    if (isLoading) return; // Não redirecionar até que o estado esteja carregado
     
-    if (rotasPrivadas.includes(pathname) && !usuarioStored) {
+    const rotasPrivadas = ['/lancar', '/relatorio', '/oficinas'];
+    
+    if (rotasPrivadas.includes(pathname) && !usuario) {
       router.push('/');
     }
-  }, [pathname, router]);
+  }, [pathname, router, usuario, isLoading]);
 
   const setUsuario = (novoUsuario: string) => {
     localStorage.setItem('nf_current_user', novoUsuario);

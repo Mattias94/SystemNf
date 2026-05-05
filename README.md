@@ -110,6 +110,10 @@ npm start
 npm run lint
 ```
 
+## ☁️ Deploy
+
+O caminho recomendado é Vercel para a aplicação e MongoDB Atlas para o banco. Veja o passo a passo em [DEPLOYMENT.md](DEPLOYMENT.md).
+
 ### Formatação com Prettier
 ```bash
 npx prettier . --write

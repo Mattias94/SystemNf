@@ -9,12 +9,13 @@ export interface ExtractedNote {
   usuario: string;
   numeroOrdem: number;
   codigoFornecedor?: string;
+  bp?: string;
   criadoEm: string;
   dataLancamento?: string;
 }
 
 export interface NoteUploadResponse {
   success: boolean;
-  data?: ExtractedNote;
+  data?: Partial<ExtractedNote>;
   error?: string;
 }

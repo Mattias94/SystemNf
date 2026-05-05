@@ -34,16 +34,17 @@ export function OficinasManager() {
 
   const OFICINAS_STORAGE_KEY = 'nf_oficinas';
 
-  useEffect(() => {
-    carregarOficias();
-    setLoading(false);
-  }, []);
-
   const carregarOficias = () => {
     if (typeof window === 'undefined') return;
     const oficinasJson = localStorage.getItem(OFICINAS_STORAGE_KEY);
     setOficias(oficinasJson ? JSON.parse(oficinasJson) : []);
   };
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    carregarOficias();
+    setLoading(false);
+  }, []);
 
   const handleAddOficias = (e: React.FormEvent) => {
     e.preventDefault();

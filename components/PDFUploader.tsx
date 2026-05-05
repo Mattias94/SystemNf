@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ExtractedNote } from '@/types/notes';
 import { NoteForm } from './NoteForm';
 import { extractTextFromPDF } from '@/lib/pdf-utils';
@@ -8,22 +8,13 @@ import { extractTextFromPDF } from '@/lib/pdf-utils';
 interface PDFUploaderProps {
   usuario: string;
   onNoteExtracted: (note: Omit<ExtractedNote, 'id' | 'numeroOrdem' | 'criadoEm'>) => void;
-  shouldReset?: boolean;
 }
 
-export function PDFUploader({ usuario, onNoteExtracted, shouldReset }: PDFUploaderProps) {
+export function PDFUploader({ usuario, onNoteExtracted }: PDFUploaderProps) {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
-  const [extractedData, setExtractedData] = useState<any>(null);
+  const [extractedData, setExtractedData] = useState<Partial<ExtractedNote> | null>(null);
   const [error, setError] = useState<string>('');
-
-  useEffect(() => {
-    if (shouldReset) {
-      setExtractedData(null);
-      setFile(null);
-      setError('');
-    }
-  }, [shouldReset]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];

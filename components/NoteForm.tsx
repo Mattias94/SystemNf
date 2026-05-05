@@ -1,13 +1,15 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ExtractedNote } from '@/types/notes';
 import { getOficinaByCnpj } from '@/lib/storage';
 
+type NoteFormInitialData = Partial<Pick<ExtractedNote, 'numeroNota' | 'nomeFornecedor' | 'cnpjFornecedor' | 'placa' | 'valorNota' | 'dataEmissao' | 'codigoFornecedor' | 'bp'>>;
+
 interface NoteFormProps {
-  initialData: any;
+  initialData: NoteFormInitialData;
   usuario: string;
-  onSuccess: (note: Omit<ExtractedNote, 'id' | 'numeroOrdem' | 'criadoEm'>) => void;
+  onSuccess: (note: Omit<ExtractedNote, 'id' | 'numeroOrdem' | 'criadoEm'>) => Promise<void> | void;
   onBack?: () => void;
 }
 
@@ -24,20 +26,6 @@ export function NoteForm({ initialData, usuario, onSuccess, onBack }: NoteFormPr
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    if (formData.cnpjFornecedor && !formData.codigoFornecedor) {
-      const oficina = getOficinaByCnpj(formData.cnpjFornecedor);
-      if (oficina) {
-        setFormData((prev) => ({
-          ...prev,
-          codigoFornecedor: oficina.codigo,
-          nomeFornecedor: oficina.nome,
-          bp: oficina.bp || '',
-        }));
-      }
-    }
-  }, [formData.cnpjFornecedor]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -56,10 +44,23 @@ export function NoteForm({ initialData, usuario, onSuccess, onBack }: NoteFormPr
     event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = event.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: name === 'valorNota' ? parseFloat(value) || 0 : value,
-    }));
+    setFormData((prev) => {
+      const updated = {
+        ...prev,
+        [name]: name === 'valorNota' ? parseFloat(value) || 0 : value,
+      };
+
+      if (name === 'cnpjFornecedor' && value && !updated.codigoFornecedor) {
+        const oficina = getOficinaByCnpj(value);
+        if (oficina) {
+          updated.codigoFornecedor = oficina.codigo;
+          updated.nomeFornecedor = oficina.nome;
+          updated.bp = oficina.bp || '';
+        }
+      }
+
+      return updated;
+    });
 
     // Limpar erro do campo
     if (errors[name]) {
@@ -71,11 +72,11 @@ export function NoteForm({ initialData, usuario, onSuccess, onBack }: NoteFormPr
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (validateForm()) {
-      onSuccess({
+      await onSuccess({
         ...formData,
         usuario,
       });

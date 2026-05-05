@@ -2,22 +2,37 @@
 
 import React, { useEffect, useState } from 'react';
 import { ExtractedNote } from '@/types/notes';
-import { getNotes, deleteNote } from '@/lib/storage';
+import { deleteNote, listNotes } from '@/lib/notes-api';
 
 export function NotesReport() {
   const [notes, setNotes] = useState<ExtractedNote[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchNumeroNota, setSearchNumeroNota] = useState('');
   const [searchCnpj, setSearchCnpj] = useState('');
 
   useEffect(() => {
-    setNotes(getNotes());
-    setLoading(false);
+    const loadNotes = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        setNotes(await listNotes());
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Erro ao carregar notas');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void loadNotes();
   }, []);
 
   const filteredNotes = notes.filter((note) => {
-    const matchNumero = note.numeroNota.includes(searchNumeroNota);
-    const matchCnpj = note.cnpjFornecedor.includes(searchCnpj);
+    const numeroNota = note.numeroNota || '';
+    const cnpjFornecedor = note.cnpjFornecedor || '';
+    
+    const matchNumero = numeroNota.includes(searchNumeroNota);
+    const matchCnpj = cnpjFornecedor.includes(searchCnpj);
     
     if (searchNumeroNota && searchCnpj) {
       return matchNumero && matchCnpj;
@@ -31,10 +46,14 @@ export function NotesReport() {
     return true;
   });
 
-  const handleDelete = (id: string) => {
-    if (window.confirm('Tem certeza que deseja deletar esta nota?')) {
-      deleteNote(id);
-      setNotes(getNotes());
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Tem certeza que deseja deletar esta nota?')) return;
+
+    try {
+      await deleteNote(id);
+      setNotes((currentNotes) => currentNotes.filter((note) => note.id !== id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao deletar nota');
     }
   };
 
@@ -49,6 +68,14 @@ export function NotesReport() {
     return (
       <div className="flex justify-center items-center h-screen">
         <p>Carregando...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-red-600 font-medium">{error}</p>
       </div>
     );
   }
@@ -135,7 +162,7 @@ export function NotesReport() {
               </tr>
             </thead>
             <tbody>
-              {filteredNotes.map((note, index) => (
+              {filteredNotes.map((note) => (
                 <tr key={note.id} className="border-b hover:bg-gray-50">
                   <td className="px-4 py-3 text-gray-900 font-semibold">{note.numeroOrdem}</td>
                   <td className="px-4 py-3 text-gray-900">{note.numeroNota}</td>
@@ -157,20 +184,18 @@ export function NotesReport() {
                 <td className="px-4 py-3 text-gray-900">
                   {new Date(note.dataEmissao).toLocaleDateString('pt-BR')}
                 </td>
-                <td className="px-4 py-3 text-gray-900 text-xs">
-                  {note.dataLancamento}
-                </td>
-                <td className="px-4 py-3 text-gray-900">{note.usuario}</td>
-                <td className="px-4 py-3">
-                  <button
-                    onClick={() => handleDelete(note.id)}
-                    className="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition text-sm font-medium"
-                  >
-                    Deletar
-                  </button>
-                </td>
-              </tr>
-            ))}
+                  <td className="px-4 py-3 text-gray-900 text-xs">{note.dataLancamento}</td>
+                  <td className="px-4 py-3 text-gray-900">{note.usuario}</td>
+                  <td className="px-4 py-3">
+                    <button
+                      onClick={() => handleDelete(note.id)}
+                      className="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition text-sm font-medium"
+                    >
+                      Deletar
+                    </button>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         )}
