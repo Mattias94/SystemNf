@@ -9,7 +9,11 @@ export async function GET() {
     return NextResponse.json({ success: true, data: notes });
   } catch (e) {
     console.error('Erro ao listar notas:', e);
-    return NextResponse.json({ success: false, error: 'Erro ao listar notas' }, { status: 500 });
+
+    const message = e instanceof Error ? e.message : 'Erro ao listar notas';
+    const status = message.includes('MONGODB_URI is not set') ? 503 : 500;
+
+    return NextResponse.json({ success: false, error: message }, { status });
   }
 }
 
