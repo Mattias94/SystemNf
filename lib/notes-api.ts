@@ -7,10 +7,21 @@ type ApiResponse<T> = {
 };
 
 async function parseJson<T>(response: Response): Promise<ApiResponse<T>> {
-  const payload = (await response.json()) as ApiResponse<T>;
+  let payload: ApiResponse<T> | null = null;
 
-  if (!response.ok || !payload.success) {
-    throw new Error(payload.error || 'Erro na API de notas');
+  try {
+    payload = (await response.json()) as ApiResponse<T>;
+  } catch {
+    payload = null;
+  }
+
+  if (!response.ok || !payload?.success) {
+    if (response.status === 403) {
+      throw new Error('Acesso negado (403) na API de notas. Verifique protecao de deploy/autenticacao no ambiente publicado.');
+    }
+
+    const apiError = payload?.error || 'Erro na API de notas';
+    throw new Error(`${apiError} (HTTP ${response.status})`);
   }
 
   return payload;
