@@ -64,7 +64,7 @@ Follow these steps in order to deploy your app to Vercel with MongoDB Atlas.
   ```bash
   git add .
   git commit -m "Prepare for deployment"
-  git push origin main
+   git push origin master
   ```
 - [ ] Verify the latest code is on GitHub (check github.com/YOUR_USERNAME/nf-system or your repo name)
 
