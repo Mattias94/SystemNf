@@ -1,6 +1,6 @@
 # NF System - Sistema de Lançamento de Notas Fiscais
 
-Sistema simples e eficiente para gerenciamento de notas fiscais com extração automática de dados via upload de PDF, construído com Next.js 14, TypeScript, Tailwind CSS e Prettier.
+Sistema simples e eficiente para gerenciamento de notas fiscais com extração automática de dados via upload de PDF, construído com Next.js 16, TypeScript, Tailwind CSS, MongoDB e Prettier.
 
 ## 🚀 Recursos Implementados
 
@@ -21,13 +21,14 @@ Sistema simples e eficiente para gerenciamento de notas fiscais com extração a
 
 ## 🛠 Tech Stack
 
-- **Framework**: Next.js 14 (App Router)
+- **Framework**: Next.js 16 (App Router)
 - **Linguagem**: TypeScript
 - **Estilização**: Tailwind CSS
+- **Banco de Dados**: MongoDB Atlas
 - **Processamento de PDF**: pdfjs-dist
 - **Formatação**: Prettier
 - **Fontes**: Google Fonts (Poppins)
-- **Gerenciamento de Estado**: localStorage (cliente)
+- **Gerenciamento de Estado**: estado local do navegador para UI e sessão
 
 ## 📁 Estrutura do Projeto
 
@@ -81,10 +82,7 @@ nf-system/
 
 ## 💾 Gerenciamento de Dados
 
-Os dados são armazenados no **localStorage** do navegador com as seguintes chaves:
-- `nf_notes`: Array de todas as notas lançadas
-- `nf_next_order`: Próximo número de ordem
-- `nf_current_user`: Usuário atualmente autenticado
+As notas são persistidas no **MongoDB Atlas**. O navegador ainda pode usar armazenamento local para preferências de interface e sessão, mas os lançamentos ficam salvos no banco.
 
 ## 🚀 Como Executar
 
