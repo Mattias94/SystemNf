@@ -3,6 +3,8 @@ import { ExtractedNote } from '@/types/notes';
 interface OficinaBase {
   codigo: string;
   cnpj: string;
+  nome?: string;
+  bp?: string;
 }
 
 const NOTES_STORAGE_KEY = 'nf_notes';
@@ -106,11 +108,11 @@ export function deleteNote(id: string): boolean {
   return true;
 }
 
-export function getOficias() {
+export function getOficias(): OficinaBase[] {
   if (typeof window === 'undefined') return [];
 
   const oficinasJson = localStorage.getItem('nf_oficinas');
-  return oficinasJson ? JSON.parse(oficinasJson) : [];
+  return oficinasJson ? (JSON.parse(oficinasJson) as OficinaBase[]) : [];
 }
 
 export function getOficinaByCodigo(codigo: string) {
@@ -140,8 +142,10 @@ export function getOficinaByCnpj(cnpj: string) {
 
       return { oficina, score };
     })
-    .filter(({ score }) => score >= 6)
-    .sort((left, right) => right.score - left.score);
+    .filter((candidate: { oficina: OficinaBase; score: number }) => candidate.score >= 6)
+    .sort(
+      (left: { oficina: OficinaBase; score: number }, right: { oficina: OficinaBase; score: number }) => right.score - left.score
+    );
 
   if (candidates.length === 0) return null;
 
