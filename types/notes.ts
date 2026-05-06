@@ -18,4 +18,5 @@ export interface NoteUploadResponse {
   success: boolean;
   data?: Partial<ExtractedNote>;
   error?: string;
+  missingFields?: string[];
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ExtractedNote } from '@/types/notes';
 import { getOficinaByCnpj } from '@/lib/storage';
 
@@ -27,6 +27,21 @@ export function NoteForm({ initialData, usuario, onSuccess, onBack }: NoteFormPr
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  useEffect(() => {
+    const cnpj = formData.cnpjFornecedor.trim();
+    if (!cnpj) return;
+
+    const oficina = getOficinaByCnpj(cnpj);
+    if (!oficina) return;
+
+    setFormData((prev) => ({
+      ...prev,
+      nomeFornecedor: oficina.nome || prev.nomeFornecedor,
+      codigoFornecedor: oficina.codigo || prev.codigoFornecedor,
+      bp: oficina.bp || prev.bp,
+    }));
+  }, [formData.cnpjFornecedor]);
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
@@ -45,21 +60,10 @@ export function NoteForm({ initialData, usuario, onSuccess, onBack }: NoteFormPr
   ) => {
     const { name, value } = event.target;
     setFormData((prev) => {
-      const updated = {
+      return {
         ...prev,
         [name]: name === 'valorNota' ? parseFloat(value) || 0 : value,
       };
-
-      if (name === 'cnpjFornecedor' && value && !updated.codigoFornecedor) {
-        const oficina = getOficinaByCnpj(value);
-        if (oficina) {
-          updated.codigoFornecedor = oficina.codigo;
-          updated.nomeFornecedor = oficina.nome;
-          updated.bp = oficina.bp || '';
-        }
-      }
-
-      return updated;
     });
 
     // Limpar erro do campo

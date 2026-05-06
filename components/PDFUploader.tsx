@@ -15,6 +15,7 @@ export function PDFUploader({ usuario, onNoteExtracted }: PDFUploaderProps) {
   const [loading, setLoading] = useState(false);
   const [extractedData, setExtractedData] = useState<Partial<ExtractedNote> | null>(null);
   const [error, setError] = useState<string>('');
+  const [warning, setWarning] = useState<string>('');
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
@@ -37,6 +38,7 @@ export function PDFUploader({ usuario, onNoteExtracted }: PDFUploaderProps) {
 
     setLoading(true);
     setError('');
+    setWarning('');
 
     try {
       // Extrair texto do PDF no cliente
@@ -58,7 +60,10 @@ export function PDFUploader({ usuario, onNoteExtracted }: PDFUploaderProps) {
       const result = await response.json();
 
       if (result.success) {
-        setExtractedData(result.data);
+        setExtractedData(result.data || null);
+        if (Array.isArray(result.missingFields) && result.missingFields.length > 0) {
+          setWarning(`Campos não identificados automaticamente: ${result.missingFields.join(', ')}. Revise antes de salvar.`);
+        }
       } else {
         setError(result.error || 'Erro ao extrair dados');
       }
@@ -107,6 +112,10 @@ export function PDFUploader({ usuario, onNoteExtracted }: PDFUploaderProps) {
 
       {error && (
         <div className="mb-4 p-3 bg-red-50 text-red-700 rounded text-sm">{error}</div>
+      )}
+
+      {warning && (
+        <div className="mb-4 p-3 bg-yellow-50 text-yellow-800 rounded text-sm">{warning}</div>
       )}
 
       <button

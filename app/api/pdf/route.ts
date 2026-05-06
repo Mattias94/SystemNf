@@ -1,25 +1,57 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { NoteUploadResponse } from '@/types/notes';
 
-function extractNotaInfo(text: string) {
-  let numeroNota = '';
+function extractNumeroNota(text: string) {
+  const normalizedText = text
+    .replace(/\u00A0/g, ' ')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\r/g, '\n');
+
+  const contents = [text, normalizedText];
+
   const numeroPatterns = [
-    /(?:NUMERO\s+DA\s+(?:NF|NF[\s\-]?E|NOTA))[\s\-:]*[\#]?(\d{1,10})/i,
-    /(?:N[\s\-]?(?:DA\s+)?(?:NF|NF[\s\-]?E|NOTA))[\s\-:]*[\#]?(\d{1,10})/i,
-    /(?:^|\s)NF[\s\-]?E?[\s\-:]*(\d{1,10})/i,
-    /(?:NOTA\s+FISCAL|NOTA)[\s\-:]*[\#]?(\d{1,10})/i,
-    /NF[EeÉé]?\s*:?\s*(\d{1,10})/i,
-    /(?:Número|numero|NUMERO)[\s\-:]?(?:da\s+)?(?:NF[Ee]?)?[\s\-:]?(\d{1,10})/i,
-    /(?:NOTA\s+DE\s+(?:PEÇA|SERVICO|SERVIÇO))[\s\-:]*[\#]?(\d{1,10})/i,
-    /(?:NOTA\s+DE\s+(?:PEÇA|SERVICO|SERVIÇO))[\s\-:]*(?:Nº|N°|N)[\s\-:]*(\d{1,10})/i,
+    // DANFE clássico: "NÚMERO 000.123.456 SÉRIE 1"
+    /(?:N[UÚ]MERO|NUMERO|N[º°o])\s*(?:DA\s+NOTA|DA\s+NF(?:[\s\-]?E)?|NOTA(?:\s+FISCAL)?)?\s*[:#\-]?\s*([0-9][0-9 .\/-]{0,20})\s*(?:S[EÉ]RIE|SERIE)\b/i,
+    // DANFE: "NF-e Nº 123456789" ou "Nº 123456789"
+    /(?:NF(?:[\s\-]?E)?|NFS(?:[\s\-]?E)?|NOTA(?:\s+FISCAL)?)\s*(?:N[º°o]|N[UÚ]MERO|NUMERO)?\s*[:#\-]?\s*([0-9][0-9 .\/-]{0,20})\b/i,
+    /(?:NUMERO|N[UÚ]MERO|N[º°o])\s*(?:DA|DO)?\s*(?:NOTA(?:\s+FISCAL)?|NF(?:[\s\-]?E)?|NFS(?:[\s\-]?E)?)?\s*[:#\-]?\s*([0-9][0-9 .\/-]{0,20})/i,
+    /(?:NOTA\s+FISCAL|NOTA\s+DE\s+(?:PECA|PEÇA|SERVICO|SERVIÇO)|NF(?:[\s\-]?E)?|NFS(?:[\s\-]?E)?)\s*(?:N[º°o]|NUMERO|N[UÚ]MERO)?\s*[:#\-]?\s*([0-9][0-9 .\/-]{0,20})/i,
+    /(?:^|\n|\s)NF(?:[\s\-]?E)?\s*[:#\-]?\s*([0-9][0-9 .\/-]{2,20})/i,
   ];
-  for (const pattern of numeroPatterns) {
-    const match = text.match(pattern);
-    if (match) {
-      numeroNota = match[1].trim();
-      if (numeroNota.length > 0) break;
+
+  for (const content of contents) {
+    for (const pattern of numeroPatterns) {
+      const match = content.match(pattern);
+      if (!match) continue;
+
+      const normalized = match[1].replace(/\D/g, '');
+
+      // Evita capturar valores longos como chave de acesso e outros identificadores.
+      if (normalized.length >= 3 && normalized.length <= 15) {
+        return normalized;
+      }
     }
   }
+
+  // Fallback DANFE: busca número em janelas próximas da chave de acesso.
+  const labelRegex = /(?:N[UÚ]MERO|NUMERO|N[º°o])\s*(?:DA\s+NOTA|DA\s+NF(?:[\s\-]?E)?|NOTA(?:\s+FISCAL)?)?/gi;
+  let labelMatch: RegExpExecArray | null = null;
+  while ((labelMatch = labelRegex.exec(normalizedText)) !== null) {
+    const window = normalizedText.slice(labelMatch.index, labelMatch.index + 180);
+    const candidate = window.match(/([0-9][0-9 .\/-]{2,20})(?:\s*(?:S[EÉ]RIE|SERIE|CHAVE|PROTOCOLO|CNPJ|IE|IM|CPF)\b|$)/i);
+    if (!candidate) continue;
+
+    const normalized = candidate[1].replace(/\D/g, '');
+    if (normalized.length >= 3 && normalized.length <= 15) {
+      return normalized;
+    }
+  }
+
+  return '';
+}
+
+function extractNotaInfo(text: string) {
+  const numeroNota = extractNumeroNota(text);
 
   let tipoNota = '';
   if (text.match(/(?:NOTA\s+DE\s+)?SERVICO|SERVIÇO|NFSe|NFS[\s\-]?E/i)) {
@@ -152,6 +184,54 @@ function extractNotaInfo(text: string) {
   };
 }
 
+function normalizeCnpj(value: string) {
+  const digits = value.replace(/\D/g, '');
+  if (digits.length !== 14) {
+    return value.trim();
+  }
+
+  return `${digits.substring(0, 2)}.${digits.substring(2, 5)}.${digits.substring(5, 8)}/${digits.substring(8, 12)}-${digits.substring(12)}`;
+}
+
+function normalizeDate(value: string) {
+  if (!value) return '';
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return value;
+  }
+
+  const parts = value.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})$/);
+  if (parts) {
+    const dia = parts[1].padStart(2, '0');
+    const mes = parts[2].padStart(2, '0');
+    let ano = parts[3];
+
+    if (ano.length === 2) {
+      ano = parseInt(ano, 10) > 50 ? `19${ano}` : `20${ano}`;
+    }
+
+    return `${ano}-${mes}-${dia}`;
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+
+  return parsed.toISOString().slice(0, 10);
+}
+
+function buildMissingFields(note: ReturnType<typeof extractNotaInfo>) {
+  const missingFields: string[] = [];
+
+  if (!note.numeroNota.trim()) missingFields.push('número da nota');
+  if (!note.cnpjFornecedor.trim()) missingFields.push('CNPJ do fornecedor');
+  if (!Number.isFinite(note.valorNota) || note.valorNota <= 0) missingFields.push('valor da nota');
+  if (!note.dataEmissao.trim()) missingFields.push('data de emissão');
+
+  return missingFields;
+}
+
 export async function POST(request: NextRequest): Promise<NextResponse<NoteUploadResponse>> {       
   try {
     const formData = await request.formData();
@@ -173,15 +253,26 @@ export async function POST(request: NextRequest): Promise<NextResponse<NoteUploa
     }
 
     const notaInfo = extractNotaInfo(extractedText);
+    const normalizedData = {
+      ...notaInfo,
+      numeroNota: notaInfo.numeroNota.trim(),
+      nomeFornecedor: notaInfo.nomeFornecedor.trim(),
+      cnpjFornecedor: normalizeCnpj(notaInfo.cnpjFornecedor),
+      placa: notaInfo.placa.trim().toUpperCase().replace(/\s/g, ''),
+      valorNota: Number.isFinite(notaInfo.valorNota) ? notaInfo.valorNota : 0,
+      dataEmissao: normalizeDate(notaInfo.dataEmissao),
+      codigoFornecedor: notaInfo.codigoFornecedor.trim(),
+    };
+    const missingFields = buildMissingFields(normalizedData);
     
     // Log para debug
     console.log('Texto extraído do PDF (primeiros 500 chars):', extractedText.substring(0, 500));
     console.log('Dados extraídos:', {
-      numeroNota: notaInfo.numeroNota,
-      tipoNota: notaInfo.tipoNota,
-      valorNota: notaInfo.valorNota,
-      cnpj: notaInfo.cnpjFornecedor,
-      dataEmissao: notaInfo.dataEmissao,
+      numeroNota: normalizedData.numeroNota,
+      tipoNota: normalizedData.tipoNota,
+      valorNota: normalizedData.valorNota,
+      cnpj: normalizedData.cnpjFornecedor,
+      dataEmissao: normalizedData.dataEmissao,
     });
 
     return NextResponse.json({
@@ -198,8 +289,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<NoteUploa
           minute: '2-digit',
           second: '2-digit',
         }),
-        ...notaInfo,
+        ...normalizedData,
       },
+      missingFields: missingFields.length > 0 ? missingFields : undefined,
     });
   } catch (error) {
     console.error('Erro ao processar PDF:', error);

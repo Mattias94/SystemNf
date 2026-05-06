@@ -11,6 +11,17 @@ export function NotesReport() {
   const [searchNumeroNota, setSearchNumeroNota] = useState('');
   const [searchCnpj, setSearchCnpj] = useState('');
 
+  const formatDate = (value: string | undefined) => {
+    if (!value) return '-';
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return value;
+    }
+
+    return parsed.toLocaleDateString('pt-BR');
+  };
+
   useEffect(() => {
     const loadNotes = async () => {
       try {
@@ -182,7 +193,7 @@ export function NotesReport() {
                   {formatCurrency(note.valorNota)}
                 </td>
                 <td className="px-4 py-3 text-gray-900">
-                  {new Date(note.dataEmissao).toLocaleDateString('pt-BR')}
+                  {formatDate(note.dataEmissao)}
                 </td>
                   <td className="px-4 py-3 text-gray-900 text-xs">{note.dataLancamento}</td>
                   <td className="px-4 py-3 text-gray-900">{note.usuario}</td>

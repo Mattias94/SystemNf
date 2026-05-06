@@ -8,6 +8,21 @@ interface OficinaBase {
 const NOTES_STORAGE_KEY = 'nf_notes';
 const NEXT_ORDER_KEY = 'nf_next_order';
 
+function normalizeCnpj(value: string) {
+  return value.replace(/\D/g, '');
+}
+
+function sharedPrefixLength(left: string, right: string) {
+  const limit = Math.min(left.length, right.length);
+  let index = 0;
+
+  while (index < limit && left[index] === right[index]) {
+    index += 1;
+  }
+
+  return index;
+}
+
 export function getNextOrderNumber(): number {
   if (typeof window === 'undefined') return 1;
 
@@ -102,7 +117,7 @@ export function getOficinaByCodigo(codigo: string) {
   if (typeof window === 'undefined') return null;
 
   const oficinas = getOficias();
-  const oficina = oficinas.find((o: OficinaBase) => o.codigo === codigo);
+  const oficina = oficinas.find((o: OficinaBase) => o.codigo.trim() === codigo.trim());
   return oficina || null;
 }
 
@@ -110,6 +125,29 @@ export function getOficinaByCnpj(cnpj: string) {
   if (typeof window === 'undefined') return null;
 
   const oficinas = getOficias();
-  const oficina = oficinas.find((o: OficinaBase) => o.cnpj === cnpj);
-  return oficina || null;
+  const cnpjNormalizado = normalizeCnpj(cnpj);
+  if (!cnpjNormalizado) return null;
+
+  const exactMatch = oficinas.find((o: OficinaBase) => normalizeCnpj(o.cnpj) === cnpjNormalizado);
+  if (exactMatch) return exactMatch;
+
+  const candidates = oficinas
+    .map((oficina: OficinaBase) => {
+      const oficinaCnpj = normalizeCnpj(oficina.cnpj);
+      const prefixScore = sharedPrefixLength(oficinaCnpj, cnpjNormalizado);
+      const includesScore = oficinaCnpj.includes(cnpjNormalizado) || cnpjNormalizado.includes(oficinaCnpj) ? Math.min(oficinaCnpj.length, cnpjNormalizado.length) : 0;
+      const score = Math.max(prefixScore, includesScore);
+
+      return { oficina, score };
+    })
+    .filter(({ score }) => score >= 6)
+    .sort((left, right) => right.score - left.score);
+
+  if (candidates.length === 0) return null;
+
+  if (candidates.length > 1 && candidates[0].score === candidates[1].score) {
+    return null;
+  }
+
+  return candidates[0].oficina;
 }
