@@ -108,6 +108,14 @@ npm start
 npm run lint
 ```
 
+### Nota sobre npm audit
+
+No estado atual do projeto, o `npm audit` pode reportar vulnerabilidade moderada transitiva ligada ao `postcss` dentro do `next`.
+
+- Não use `npm audit fix --force` neste repositório sem validar impacto, porque a correção automática pode trocar versões de forma incompatível.
+- Prefira atualizar o `next` em patch/minor quando houver release oficial com a dependência corrigida.
+- Continue monitorando o relatório com `npm audit` a cada atualização.
+
 ## ☁️ Deploy
 
 O caminho recomendado é Vercel para a aplicação e MongoDB Atlas para o banco. Veja o passo a passo em [DEPLOYMENT.md](DEPLOYMENT.md).
