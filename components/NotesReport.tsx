@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { ExtractedNote } from '@/types/notes';
 import { deleteNote, listNotes } from '@/lib/notes-api';
+import { useAuth } from '@/app/providers';
 
 export function NotesReport() {
   const [notes, setNotes] = useState<ExtractedNote[]>([]);
@@ -10,6 +11,7 @@ export function NotesReport() {
   const [error, setError] = useState<string | null>(null);
   const [searchNumeroNota, setSearchNumeroNota] = useState('');
   const [searchCnpj, setSearchCnpj] = useState('');
+  const { usuario } = useAuth();
 
   const formatDate = (value: string | undefined) => {
     if (!value) return '-';
@@ -61,7 +63,12 @@ export function NotesReport() {
     if (!window.confirm('Tem certeza que deseja deletar esta nota?')) return;
 
     try {
-      await deleteNote(id);
+      if (!usuario) {
+        setError('Usuário não informado');
+        return;
+      }
+
+      await deleteNote(id, usuario);
       setNotes((currentNotes) => currentNotes.filter((note) => note.id !== id));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao deletar nota');
@@ -198,12 +205,16 @@ export function NotesReport() {
                   <td className="px-4 py-3 text-gray-900 text-xs">{note.dataLancamento}</td>
                   <td className="px-4 py-3 text-gray-900">{note.usuario}</td>
                   <td className="px-4 py-3">
-                    <button
-                      onClick={() => handleDelete(note.id)}
-                      className="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition text-sm font-medium"
-                    >
-                      Deletar
-                    </button>
+                    {usuario === note.usuario ? (
+                      <button
+                        onClick={() => handleDelete(note.id)}
+                        className="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition text-sm font-medium"
+                      >
+                        Deletar
+                      </button>
+                    ) : (
+                      <span className="text-xs text-gray-400">Somente leitura</span>
+                    )}
                   </td>
                 </tr>
               ))}

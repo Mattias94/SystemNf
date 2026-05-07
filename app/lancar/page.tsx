@@ -3,31 +3,20 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { PDFUploader } from '@/components/PDFUploader';
-import { createNote, findDuplicateNote } from '@/lib/notes-api';
+import { createNote } from '@/lib/notes-api';
 import { ExtractedNote } from '@/types/notes';
 import { useAuth } from '@/app/providers';
+import { truncateDisplayName } from '@/lib/string-utils';
 
 export default function LancarPage() {
   const { usuario, isLoading } = useAuth();
+  const usuarioExibido = usuario ? truncateDisplayName(usuario) : '';
   const [notaSalva, setNotaSalva] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [uploaderKey, setUploaderKey] = useState(0);
 
   const handleNoteExtracted = async (note: Omit<ExtractedNote, 'id' | 'numeroOrdem' | 'criadoEm'>) => {
     try {
-      const notaDuplicada = await findDuplicateNote(note.numeroNota, usuario);
-      
-      if (notaDuplicada) {
-        setErro(`⚠️ DUPLICIDADE DETECTADA: Nota fiscal #${note.numeroNota} já foi lançada em ${new Date(notaDuplicada.criadoEm).toLocaleDateString('pt-BR')} às ${new Date(notaDuplicada.criadoEm).toLocaleTimeString('pt-BR')}. Lançamento bloqueado.`);
-        
-        // Limpar mensagem de erro após 5 segundos
-        setTimeout(() => {
-          setErro(null);
-        }, 5000);
-        
-        return; // Impedir salvamento
-      }
-
       await createNote(note as Omit<ExtractedNote, 'id'>);
       setNotaSalva(true);
       setErro(null);
@@ -39,7 +28,8 @@ export default function LancarPage() {
       }, 2000);
     } catch (error) {
       console.error('Erro ao salvar nota:', error);
-      setErro(error instanceof Error ? error.message : 'Erro ao salvar a nota. Tente novamente.');
+      const message = error instanceof Error ? error.message : 'Erro ao salvar a nota. Tente novamente.';
+      setErro(message.includes('já lançada') ? `⚠️ DUPLICIDADE DETECTADA: Nota fiscal #${note.numeroNota} já foi lançada. Lançamento bloqueado.` : message);
     }
   };
 
@@ -58,7 +48,7 @@ export default function LancarPage() {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-800">Lançar Nota Fiscal</h1>
-            <p className="text-gray-600 mt-1">Usuário: {usuario}</p>
+            <p className="text-gray-600 mt-1" title={usuario}>Usuário: {usuarioExibido}</p>
           </div>
           <div className="space-x-3">
             <Link href="/relatorio">

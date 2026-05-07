@@ -55,8 +55,11 @@ export async function updateNote(id: string, updates: Partial<ExtractedNote>): P
   return payload.data as ExtractedNote;
 }
 
-export async function deleteNote(id: string): Promise<void> {
-  const response = await fetch(`/api/notes/${id}`, { method: 'DELETE' });
+export async function deleteNote(id: string, usuarioAtual: string): Promise<void> {
+  const response = await fetch(`/api/notes/${id}`, {
+    method: 'DELETE',
+    headers: { 'x-current-user': usuarioAtual },
+  });
   await parseJson<{ id: string }>(response);
 }
 

@@ -4,9 +4,11 @@ import React from 'react';
 import Link from 'next/link';
 import { NotesReport } from '@/components/NotesReport';
 import { useAuth } from '@/app/providers';
+import { truncateDisplayName } from '@/lib/string-utils';
 
 export default function RelatorioPage() {
   const { usuario, isLoading } = useAuth();
+  const usuarioExibido = usuario ? truncateDisplayName(usuario) : '';
 
   if (isLoading || !usuario) {
     return (
@@ -23,7 +25,7 @@ export default function RelatorioPage() {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-800">Relatório de Notas Fiscais</h1>
-            <p className="text-gray-600 mt-1">Usuário: {usuario}</p>
+            <p className="text-gray-600 mt-1" title={usuario}>Usuário: {usuarioExibido}</p>
           </div>
           <div className="space-x-3">
             <Link href="/lancar">

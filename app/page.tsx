@@ -3,10 +3,12 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from './providers';
+import { truncateDisplayName } from '@/lib/string-utils';
 
 export default function Home() {
   const { usuario: usuarioAutenticado, setUsuario, logout, isLoading } = useAuth();
   const [usuarioInput, setUsuarioInput] = useState(usuarioAutenticado || '');
+  const usuarioExibido = usuarioAutenticado ? truncateDisplayName(usuarioAutenticado) : '';
 
   React.useEffect(() => {
     if (usuarioAutenticado) {
@@ -42,7 +44,7 @@ export default function Home() {
         <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full">
           <h1 className="text-3xl font-bold text-gray-800 mb-2 text-center">NF System</h1>
           <p className="text-gray-600 text-center mb-8">
-            Bem-vindo, <strong>{usuarioAutenticado}</strong>!
+            Bem-vindo, <strong title={usuarioAutenticado}>{usuarioExibido}</strong>!
           </p>
 
           <div className="space-y-3">

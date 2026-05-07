@@ -54,20 +54,29 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ success: true, data: updated });
   } catch (e) {
     console.error('Erro ao atualizar nota:', e);
-    return NextResponse.json({ success: false, error: 'Erro ao atualizar nota' }, { status: 500 });
+    const message = e instanceof Error ? e.message : 'Erro ao atualizar nota';
+    const status = message.includes('já lançada') ? 409 : 500;
+    return NextResponse.json({ success: false, error: message }, { status });
   }
 }
 
 export async function DELETE(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id') || request.nextUrl.pathname.split('/').pop();
+  const usuarioAtual = request.headers.get('x-current-user') || '';
   try {
     if (!id) return NextResponse.json({ success: false, error: 'id not provided' }, { status: 400 });
-    const ok = await deleteNoteById(id);
+    if (!usuarioAtual) {
+      return NextResponse.json({ success: false, error: 'Usuário não informado' }, { status: 400 });
+    }
+
+    const ok = await deleteNoteById(id, usuarioAtual);
     if (!ok) return NextResponse.json({ success: false, error: 'Nota não encontrada' }, { status: 404 });
     return NextResponse.json({ success: true, data: { id } });
   } catch (e) {
     console.error('Erro ao deletar nota:', e);
-    return NextResponse.json({ success: false, error: 'Erro ao deletar nota' }, { status: 500 });
+    const message = e instanceof Error ? e.message : 'Erro ao deletar nota';
+    const status = message.includes('somente pode deletar') || message.includes('lançadas por você') ? 403 : 500;
+    return NextResponse.json({ success: false, error: message }, { status });
   }
 }
